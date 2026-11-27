@@ -66,6 +66,8 @@ Everything is kept in one `localStorage` key, `mood-tracker-entries`, as JSON ke
 
 Everything that enters the store goes through `normalizeEntry()` in `src/app/tracker.ts`, which drops unknown moods and colors, trims and shortens text, and caps the lists. A future import can reuse it, and the `Modal` component, for its own dialog.
 
+Use the **JSON Export** or **CSV Export** buttons below the calendar to download all saved days across all years. JSON exports include the `appId`, format `version`, and date-keyed `entries`; CSV exports use one row per day with the themes and up to three tasks (including their colors). Export filenames include the app ID and the date of download.
+
 <br/>
 
 ## App customization at development level
