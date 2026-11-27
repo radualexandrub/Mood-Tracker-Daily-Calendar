@@ -74,6 +74,7 @@
             <tr>
               @for (c of row.cells ?? []; track c.iso) {
                 <td [class.weekend]="c.weekend" [class.odd]="c.odd" [class.out]="!c.inYear"
+                    [class.today]="c.iso === todayIso"
                     [class.clickable]="c.inYear" [attr.data-mood]="c.mood"
                     [attr.tabindex]="c.inYear ? 0 : null" [title]="c.title"
                     (click)="openDay(c)" (keydown.enter)="onCellKey(c, $event)" (keydown.space)="onCellKey(c, $event)">

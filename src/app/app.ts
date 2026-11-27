@@ -102,6 +102,8 @@ export class App implements AfterViewInit {
   readonly maxThemes = MAX_THEMES;
   readonly maxTasks = MAX_TASKS;
   readonly weekdayHeaders = WEEKDAY_HEADERS;
+  /** ISO date used to highlight today's cell in the calendar. */
+  readonly todayIso = toIso(new Date());
   /** Currently displayed year; changing it rebuilds the derived calendar signals */
   readonly year = signal(initialYearSelected());
   readonly canGoBack = computed(() => this.year() > MIN_YEAR);
