@@ -318,6 +318,29 @@ table {
   text-align: left;
   font-size: 0.95rem;
 }
+
+/* Export to CSV or JSON section & buttons */
+.export .hint {
+  margin: 0 0 0.75rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+.export .actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+.export button {
+  padding: 0.5rem 1rem;
+  border: 0;
+  border-radius: 6px;
+  background: var(--user, var(--primary));
+  color: var(--font-opposite-color);
+}
+.export button:hover {
+  filter: brightness(1.15);
+}
+
 .banner {
   display: flex;
   flex-wrap: wrap;

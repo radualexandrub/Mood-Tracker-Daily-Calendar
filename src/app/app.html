@@ -107,6 +107,15 @@
       </tbody>
     </table>
   </section>
+
+  <section class="export">
+    <h2>Save your logged days locally</h2>
+    <p class="hint">Download all your set moods, tasks and day-themes across all years.</p>
+    <div class="actions">
+      <button type="button" (click)="exportJson()">JSON Export</button>
+      <button type="button" (click)="exportCsv()">CSV Export</button>
+    </div>
+  </section>
 </main>
 
 <app-footer></app-footer>

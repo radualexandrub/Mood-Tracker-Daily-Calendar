@@ -18,11 +18,20 @@ const WEEKDAY_HEADERS = [
 const ENTRIES_KEY = 'mood-tracker-entries';
 const YEAR_KEY = 'mood-tracker-selected-year';
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+const CSV_SEPARATOR = ',';
+const EXPORT_APP_ID = 'mood-tracker-calendar';
+const EXPORT_VERSION = 1;
 
 const pad = (n: number) => String(n).padStart(2, '0');
 const toIso = (date: Date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 const isWeekend = (date: Date) => date.getDay() === 0 || date.getDay() === 6;
 const shortMonth = (m: number) => MONTHS[m].slice(0, 3);
+
+/** Quotes a CSV field and prevents Excel from interpreting labels as formulas. */
+function csvCell(value: string): string {
+  const safeValue = /^[\s]*[=+\-@]/.test(value) ? `'${value}` : value;
+  return `"${safeValue.replace(/"/g, '""')}"`;
+}
 
 interface Cell {
   iso: string;
@@ -195,6 +204,60 @@ export class App implements AfterViewInit {
         localStorage.setItem(YEAR_KEY, String(this.year()));
       } catch { /* ignore */ }
     });
+  }
+
+  /** Downloads all saved days as a versioned JSON export. */
+  exportJson(): void {
+    const data = {
+      appId: EXPORT_APP_ID,
+      version: EXPORT_VERSION,
+      entries: this.entries(),
+    };
+    this.download(
+      this.exportFilename('json'),
+      JSON.stringify(data, null, 2),
+      'application/json;charset=utf-8',
+    );
+  }
+
+  /** Downloads all saved days as a CSV 
+   * with one row per date and columns for each task. */
+  exportCsv(): void {
+    const header = ['date', 'mood', 'themes'];
+    for (let i = 0; i < MAX_TASKS; i++) {
+      header.push(`task_${i + 1}_text`, `task_${i + 1}_color`);
+    }
+    const rows = Object.entries(this.entries())
+      .sort(([dateA], [dateB]) => dateA.localeCompare(dateB))
+      .map(([date, entry]) => {
+        const row = [date, entry.mood ?? '', JSON.stringify(entry.themes)];
+        for (let i = 0; i < MAX_TASKS; i++) {
+          const task = entry.tasks[i];
+          row.push(task?.text ?? '', task?.color ?? '');
+        }
+        return row;
+      });
+    const content = [header, ...rows]
+      .map(row => row.map(csvCell).join(CSV_SEPARATOR))
+      .join('\r\n');
+
+    this.download(this.exportFilename('csv'), content, 'text/csv;charset=utf-8');
+  }
+
+  private exportFilename(extension: 'json' | 'csv'): string {
+    const date = new Date();
+    return `${EXPORT_APP_ID}_${date.getFullYear()}_${pad(date.getMonth() + 1)}_${pad(date.getDate())}.${extension}`;
+  }
+
+  private download(filename: string, content: string, mime: string): void {
+    const url = URL.createObjectURL(new Blob([content], { type: mime }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url));
   }
 
   /** Moves the selected year by the requested amount while respecting the supported bounds */
