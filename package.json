@@ -1,5 +1,5 @@
 {
-  "name": "zile-libere",
+  "name": "mood-tracker-calendar",
   "version": "1.0.0",
   "private": true,
   "scripts": {
@@ -10,6 +10,7 @@
     "node": ">=20.19"
   },
   "dependencies": {
+    "@angular/cdk": "^20.2.14",
     "@angular/common": "^20.0.0",
     "@angular/compiler": "^20.0.0",
     "@angular/core": "^20.0.0",

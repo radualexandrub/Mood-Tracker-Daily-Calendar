@@ -1,124 +1,46 @@
 <!-- src/app/app.html: Main application template -->
-<div class="balance-bar" [class.over]="remaining() <= 0">
-  <div class="balance-inner">
-    <span>Concediu rămas {{ year() }}: <strong>{{ remaining() }}</strong> din {{ total() }} zile</span>
-    <div class="bar" role="progressbar" aria-label="Zile de concediu folosite"
-         [attr.aria-valuenow]="used()" aria-valuemin="0" [attr.aria-valuemax]="total()">
-      <div class="fill" [style.width.%]="percentUsed()"></div>
+<div class="top-bar">
+  <div class="top-bar-inner">
+    <span>Days logged {{ year() }}: <strong>{{ logged() }}</strong> of {{ daysInYear() }}</span>
+    <div class="bar" role="progressbar" aria-label="Days logged"
+         [attr.aria-valuenow]="logged()" aria-valuemin="0" [attr.aria-valuemax]="daysInYear()">
+      <div class="fill" [style.width.%]="percentLogged()"></div>
     </div>
   </div>
 </div>
 
 <main class="page">
-  <h1>Planificator concediu - Zile libere {{ year() }}</h1>
-  <nav class="year-tabs" aria-label="Alege anul">
-    @for (y of years; track y) {
-      <button type="button" [class.active]="y === year()"
-              [attr.aria-current]="y === year() ? 'true' : null"
-              (click)="selectYear(y)">{{ y }}</button>
-    }
+  <h1>Mood Tracker &amp; Daily Calendar {{ year() }}</h1>
+  <nav class="year-nav" aria-label="Choose year">
+    <!-- Left arrow -->
+    <button type="button" aria-label="Previous year" title="Previous year"
+            [disabled]="!canGoBack()" (click)="changeYear(-1)">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 5l-7 7 7 7" /></svg>
+    </button>
+    <!-- Current selected year -->
+    <span class="year-label" aria-live="polite">{{ year() }}</span>
+    <!-- Right arrow -->
+    <button type="button" aria-label="Next year" title="Next year"
+            [disabled]="!canGoForward()" (click)="changeYear(1)">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 5l7 7-7 7" /></svg>
+    </button>
   </nav>
   <p class="summary">
-    În {{ year() }} sunt {{ stateRows().length }} zile libere legale: {{ weekendCount() }} în weekend și
-    <strong>{{ weekdayCount() }} în timpul săptămânii</strong>
+    Click a day to set its mood, up to {{ maxThemes }} themes and up to {{ maxTasks }} tasks.
   </p>
 
-  <section class="planner">
-    <h2>Concediul meu</h2>
-    <div class="controls">
-      <label>
-        Zile de concediu pe an
-        <input type="number" min="0" step="1" [value]="total()" (input)="setTotal($any($event.target).value)">
-      </label>
-      <label>
-        De la
-        <input type="date" [min]="minDate()" [max]="maxDate()" [value]="start()"
-               (change)="setStart($any($event.target).value)" (keyup.enter)="add()">
-      </label>
-      <label>
-        Până la
-        <input type="date" [min]="start() || minDate()" [max]="maxDate()" [value]="end()" [disabled]="!start()"
-               (change)="setEnd($any($event.target).value)" (keyup.enter)="add()">
-      </label>
-      <label>
-        Eticheta
-        <input type="text" maxlength="32" placeholder="Concediu" 
-               [value]="label()" 
-               (input)="label.set($any($event.target).value)" 
-               (keyup.enter)="add()">
-      </label>
-      <button type="button" (click)="add()">Adaugă</button>
-    </div>
-    @if (message()) {
-      <p class="error" role="alert">{{ message() }}</p>
-    }
-    @if (info()) {
-      <p class="info" role="status">{{ info() }}</p>
-    }
-  </section>
-
-  <div class="lists" [class.with-user]="userRows().length">
-    <section>
-      <h2>Zile libere legale {{ year() }}</h2>
-      <table class="list">
-        <thead><tr><th>Data</th><th>Ziua</th><th>Sărbători legale</th></tr></thead>
-        <tbody>
-          @for (r of stateRows(); track r.iso) {
-            <tr [class.weekend]="r.weekend">
-              <td>{{ r.label }}</td><td>{{ r.weekday }}</td><td>{{ r.name }}</td>
-            </tr>
-          }
-        </tbody>
-      </table>
-    </section>
-
-    @if (userRows().length) {
-      <section>
-        <h2 style="color: var(--user);">Zilele mele de concediu {{ year() }}</h2>
-        <table class="list user-list">
-          <thead>
-            <tr>
-              <th>Data</th>
-              <th>Ziua</th>
-              <th>Eticheta</th>
-              <th><span class="sr-only">Șterge</span></th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (r of userRows(); track r.iso) {
-              <tr>
-                <td>{{ r.label }}</td>
-                <td>{{ r.weekday }}</td>
-                <td>
-                  <input class="user-list-label-input" type="text" maxlength="30" 
-                         [value]="r.name"
-                         [attr.aria-label]="'Eticheta pentru ' + r.label"
-                         (blur)="updateLabel(r.iso, $any($event.target).value)">
-                </td>
-                <td class="action">
-                  <button type="button" class="remove" (click)="remove(r.iso)" [attr.aria-label]="'Șterge ' + r.label">
-                    Șterge
-                  </button>
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </section>
-    }
-  </div>
-
   <h2>Calendar {{ year() }}</h2>
-  <nav class="months-nav" aria-label="Salt la lună">
+  <nav class="months-nav" aria-label="Jump to month">
     @for (m of months(); track m.index) {
-      <button type="button" [title]="m.work + ' zile lucrătoare din ' + m.daysInMonth" (click)="goTo(m.index)">{{ m.name }}</button>
+      <button type="button" [title]="m.logged + ' of ' + m.daysInMonth + ' days logged'" (click)="goTo(m.index)">{{ m.name }}</button>
     }
   </nav>
 
   <div class="legend">
+    @for (m of moods; track m.id) {
+      <span [attr.data-mood]="m.id"><app-mood-face class="legend-face" [mood]="m.id" /> {{ m.label }}</span>
+    }
     <span><i class="swatch weekend"></i> Weekend</span>
-    <span><i class="swatch state"></i> Zi liberă legală</span>
-    <span><i class="swatch user"></i> Concediul meu</span>
   </div>
 
   <section class="month">
@@ -137,9 +59,13 @@
               <td colspan="7">
                 <div class="banner">
                   <strong>{{ m.name }} {{ year() }}</strong>
-                  <span>
-                    Zile lucrătoare: <strong>{{ m.work }}</strong> din {{ m.daysInMonth }}
-                    @if (m.vacation) { <span class="after">(<strong>{{ m.work - m.vacation }}</strong> după concediu)</span> }
+                  <span class="banner-stats">
+                    <span>Days logged: <strong>{{ m.logged }}</strong> of {{ m.daysInMonth }}</span>
+                    @for (mood of moods; track mood.id) {
+                      <span class="mood-count" [attr.data-mood]="mood.id" [title]="mood.label">
+                        <app-mood-face [mood]="mood.id" /> {{ m.moods[mood.id] }}
+                      </span>
+                    }
                   </span>
                 </div>
               </td>
@@ -147,24 +73,31 @@
           } @else {
             <tr>
               @for (c of row.cells ?? []; track c.iso) {
-                <td [class.weekend]="c.weekend" [class.state]="!!c.state" [class.user]="!!c.userLabel"
-                    [class.odd]="c.odd" [class.out]="!c.inYear" [class.pickable]="canPickFreeDay(c)"
-                    [title]="c.state ?? c.userLabel ?? (canPickFreeDay(c) ? 'Adaugă concediu' : '')"
-                    (click)="addFromCalendar(c)">
-                  <span class="n">{{ c.day }}</span>
-                  @if (c.userLabel) {
-                    <button type="button" class="remove-day" title="Șterge"
-                            [attr.aria-label]="'Șterge concediul din ' + c.day + ' ' + c.monthShort"
+                <td [class.weekend]="c.weekend" [class.odd]="c.odd" [class.out]="!c.inYear"
+                    [class.clickable]="c.inYear" [attr.data-mood]="c.mood"
+                    [attr.tabindex]="c.inYear ? 0 : null" [title]="c.title"
+                    (click)="openDay(c)" (keydown.enter)="onCellKey(c, $event)" (keydown.space)="onCellKey(c, $event)">
+                  @if (c.mood; as mood) {
+                    <app-mood-face class="face" [mood]="mood" />
+                  }
+                  <div class="day">
+                    <span class="n">{{ c.day }}</span>
+                    @if (c.themes.length) { <small class="themes">{{ c.themes.join(', ') }}</small> }
+                    @for (t of c.tasks; track $index) {
+                      <small class="task" [attr.data-color]="t.color">{{ t.text }}</small>
+                    }
+                    @if (c.first) { <small class="edge">start {{ c.monthShort }}</small> }
+                    @if (c.last) { <small class="edge">end {{ c.monthShort }}</small> }
+                  </div>
+                  @if (c.filled) {
+                    <button type="button" class="remove-day" title="Clear this day"
+                            [attr.aria-label]="'Clear ' + c.day + ' ' + c.monthShort"
                             (click)="remove(c.iso); $event.stopPropagation()">
                       <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                         <path d="M6 6l12 12M18 6 6 18" />
                       </svg>
                     </button>
                   }
-                  @if (c.state) { <small>{{ c.state }}</small> }
-                  @else if (c.userLabel) { <small>{{ c.userLabel }}</small> }
-                  @if (c.first) { <small class="edge">început {{ c.monthShort }}</small> }
-                  @if (c.last) { <small class="edge">sfârșit {{ c.monthShort }}</small> }
                 </td>
               }
             </tr>
@@ -178,8 +111,8 @@
 <app-footer></app-footer>
 
 @if (showBackToTop()) {
-  <button class="back-to-top" type="button" 
-          aria-label="Înapoi sus" title="Înapoi sus" (click)="backToTop()">
+  <button class="back-to-top" type="button"
+          aria-label="Back to top" title="Back to top" (click)="backToTop()">
     <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
       <path d="M12 19V5m-7 7 7-7 7 7" />
     </svg>

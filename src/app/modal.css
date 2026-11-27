@@ -1,0 +1,74 @@
+/* src/app/modal.css: Modal frame styles */
+:host {
+  display: block;
+}
+
+.modal {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100dvh - 2rem);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: 0 12px 40px rgb(0 0 0 / 0.35);
+  color: var(--text);
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  background: var(--navbar-background);
+  color: var(--font-opposite-color);
+}
+.modal-header h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.modal-close {
+  display: grid;
+  flex: none;
+  width: 2rem;
+  height: 2rem;
+  padding: 0.4rem;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+}
+.modal-close:hover {
+  background: rgb(255 255 255 / 0.2);
+}
+.modal-close svg {
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-width: 2.5;
+}
+
+.modal-body {
+  flex: 1 1 auto;
+  padding: 0.25rem 1rem 1rem;
+  overflow-y: auto;
+}
+
+.modal-footer {
+  display: flex;
+  flex: none;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  padding-top: 0;
+  padding-bottom: 1rem;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+.modal-footer:empty {
+  display: none;
+}

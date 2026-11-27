@@ -1,38 +1,25 @@
-# Planificator concediu - Zile libere
+# Mood Tracker & Daily Calendar
 
-A static Angular app that lists the legal public holidays in Romania for 2026 and 2027 and shows them on a continuous year calendar. You can also plan your own company leave on top of it: pick single days or date ranges, track how many leave days you have left, and see the resulting working days for every month.
+A static Angular app that shows a continuous year calendar where you log, for every day, your mood, up to 3 themes and up to 3 short tasks. Click a day, fill in a dialog, and the calendar cell shows a mood-colored background, a faint emoticon, the themes and the tasks.
 
-There is no backend and no server-side dependency. The build output is plain HTML, CSS and JS, so it runs on any static host such as GitHub Pages.
+There is no backend and no server-side dependency. The build output is plain HTML, CSS and JS, therefore it runs on any static host. The data is stored in browser's `localStorage` and never sent anywhere.
 
-Built with Angular 20. Node version used: 24.
-
-```bash
-npm -v
-# 11.19.0
-node -v
-# v24.20.0
-```
+Built with Angular 20 and Angular CDK (dialog). Node.js version 24.
 
 <br/>
 
 ## Features
 
-- **Legal holidays list**: all 17 legal free days of 2027 with date, weekday and name. Weekend rows are greyed out, and the summary sentence ("8 în weekend și 9 în timpul săptămânii") is computed from the data.
-- **Selectable years**: switch between 2026 and 2027; the holidays, calendar, vacation balance, and saved leave days all follow the selected year. The app remembers your last selection.
-- **Personal leave planner**: choose a start date ("De la") and an end date ("Până la"), then press **Adaugă**.
-  - Picking the start date fills the end date automatically, so a single day takes one pick.
-  - For a range, every working day between the two dates is added as its own entry.
-  - Weekends, legal holidays and days you already chose are skipped, so they never use up your leave.
-  - Each added day can be removed individually.
-- **Leave allowance counter**: set the total number of leave days per year (default 21). A sticky bar at the top shows how many are left, with a progress bar, and it updates with every day you add or remove. If a range has more working days than you have left, nothing is added and you are told why.
-- **Two lists side by side**: once you add a leave day, a second list "Zilele mele de concediu" appears next to the legal holidays. On mobile the two lists are stacked.
-- **Continuous year calendar**: one scrollable grid of Monday-to-Sunday weeks for the whole year, with no gaps in the day numbering when a month ends.
-  - Weekends are hatched, legal holidays are filled and labelled, and your leave days use the same colour with the hue rotated by 60 degrees.
-  - Months alternate between two slightly different backgrounds, and the first and last day of each month carry a small label.
-  - Each month starts with a banner showing its number of working days (for example "21 din 31"), plus the number left after your leave.
-  - The weekday header stays pinned while you scroll, and the month buttons scroll smoothly to their month.
-- **Saved in your browser**: your leave days and allowance are stored in `localStorage`, so they survive a page refresh. Nothing is sent anywhere.
-- **Fully static and responsive**: works on desktop and mobile, with no hosted services.
+- **Mood per day**: Angry (red), Sad (orange), Neutral (yellow) or Happy (green). The cell gets a soft tint of that color and a low-opacity emoticon (eyes, eyebrows, mouth) behind the day number.
+- **Up to 3 themes per day**: chosen from a predefined list (Work, Clean, Outside, Shopping, ...) and shown in the cell separated by commas.
+- **Up to 3 tasks per day**: free text of at most 64 characters, one line per task in the cell. Each task has a text color: default, green or red.
+- **Edit in a dialog**: clicking a day (or pressing Enter / Space on it) opens a dialog. Save stores the day; Cancel, Escape and X close it without changes. Saving a day with nothing selected removes it.
+- **Clear a day**: the small X in a calendar cell deletes the mood, themes and tasks of that day.
+- **Continuous year calendar**: one scrollable grid of Monday-to-Sunday weeks, with no gaps in the day numbering when a month ends. Months alternate between two slightly different backgrounds, the first and last day of each month carry a small label, and the weekday header stays pinned while you scroll.
+- **Month banners**: each month starts with a banner showing how many days are logged and how many days had each mood.
+- **Year navigation**: previous / next year buttons. The app remembers your last selected year.
+- **Dark theme and accent color**: toggles in the footer.
+- **Responsive**: works on desktop and mobile.
 
 <br/>
 
@@ -56,42 +43,39 @@ Build:
 npm run build
 ```
 
-The production build is written to `dist/zile-libere/browser`. It uses a relative base path (`<base href="./">`), so it can be served from the root of a domain or from a sub-path such as `https://<user>.github.io/<repo>/`.
+The production build is written to `dist/mood-tracker-calendar/browser`. It uses a relative base path (`<base href="./">`), so it can be served from the root of a domain or from a URL sub-path (e.g. `<site>.com/<app>`).
 
 <br/>
 
-## Deploying to GitHub Pages
+## How data is stored
 
-A workflow is included in `.github/workflows/deploy.yml`. It installs dependencies with Node 24, builds the app and publishes the output.
+Everything is kept in one `localStorage` key, `mood-tracker-entries`, as JSON keyed by date. Days with no data are not stored.
 
-1. Push the project to a GitHub repository on the `main` branch. Commit `package-lock.json`, because the workflow uses `npm ci`.
-2. In the repository, go to **Settings → Pages** and set **Source** to **GitHub Actions**.
-3. Every push to `main` now redeploys the site.
-
-<br/>
-
-## Project structure
-
-```text
-src/
-  index.html          Page shell and relative base href
-  styles.css          Global colour variables (theme)
-  app/
-    holidays.ts       Years and lists of legal holidays
-    app.ts            State and logic (signals)
-    app.html          Template
-    app.css           Component styles
-.github/workflows/
-  deploy.yml          GitHub Pages deployment
+```json
+{
+  "2026-03-14": {
+    "mood": "happy",
+    "themes": ["Work", "Cook"],
+    "tasks": [
+      { "text": "Cooked dinner", "color": "green" },
+      { "text": "Didn't go outside", "color": "red" }
+    ]
+  }
+}
 ```
 
+Everything that enters the store goes through `normalizeEntry()` in `src/app/tracker.ts`, which drops unknown moods and colors, trims and shortens text, and caps the lists. A future import can reuse it, and the `Modal` component, for its own dialog.
+
 <br/>
 
-## Customising
+## App customization at development level
 
-- **Theme colour**: change `--hue-primary` in `src/styles.css`. The leave colour is derived from it as `--hue-user: calc(var(--hue-primary) - 120)`
-- **Default allowance**: change `DEFAULT_ALLOWANCE` in `src/app/app.ts` (currently 21 days)
-- **Holidays or year**: add a holiday list to `HOLIDAYS_BY_YEAR` in `src/app/holidays.ts`. The year tab, calendar, and separate saved planner data are generated from that list
+- **Theme colour**: change `--hue-primary` in `src/styles.css`.
+- **Mood colors and tint**: change `--mood-angry`, `--mood-sad`, `--mood-neutral`, `--mood-happy`, `--mood-tint` (cell background strength) and `--mood-face-opacity` in `src/styles.css`. The dark theme has its own values.
+- **Task text colors**: change `--task-green` and `--task-red` in `src/styles.css`.
+- **Themes list**: edit `THEMES` in `src/app/tracker.ts`. Themes already saved on a day stay visible even if you remove them from the list.
+- **Limits**: `MAX_TASKS`, `MAX_THEMES`, `TASK_MAX_LENGTH` in `src/app/tracker.ts`. Note that the calendar styles are tuned for 3 tasks.
+- **Emoticons**: the eyebrow and mouth paths are in `FACES` in `src/app/mood-face.ts`.
 
 <br/>
 

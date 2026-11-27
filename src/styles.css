@@ -1,7 +1,9 @@
 /* src/styles.css: Global CSS variables for consistent theming */
+@import '@angular/cdk/overlay-prebuilt.css';
+
 :root {
   /* Main brand colour: dark, desaturated green. Change the hue here and everything follows. */
-  --hue-primary: 150;
+  --hue-primary: 140; 
   --primary: hsl(var(--hue-primary) 28% 24%);
   --navbar-background: var(--primary);
   --footer-background: color-mix(in srgb, var(--primary), black 10%);
@@ -18,11 +20,17 @@
   --surface-header: #eef2f0;
   --surface-overlay: rgb(255 255 255 / 0.65);
 
-  /* User days: the same colour with the hue rotated by 60 degrees. */
-  --hue-user: calc(var(--hue-primary) - 120);
-  --user: hsl(var(--hue-user) 28% 24%);
-  --user-soft: hsl(var(--hue-user) 40% 80%);
-  --user-highlight: var(--user-soft);
+  /* Moods: slightly desaturated. They do not follow the accent colour. */
+  --mood-angry: hsl(2 58% 52%);
+  --mood-sad: hsl(26 74% 54%);
+  --mood-neutral: hsl(46 78% 50%);
+  --mood-happy: hsl(135 40% 42%);
+  --mood-tint: 26%; /* how much of the mood colour tints a calendar cell */
+  --mood-face-opacity: 0.22; /* the big face behind the day number */
+
+  /* Task text colours */
+  --task-green: hsl(140 60% 26%);
+  --task-red: hsl(2 66% 40%);
 
   --background-color: hsl(var(--hue-primary) 18% 96%);
   --text: #1d2b25;
@@ -45,9 +53,13 @@
   --surface-control: hsl(var(--hue-primary) 18% 24%);
   --surface-header: hsl(var(--hue-primary) 14% 20%);
   --surface-overlay: rgb(255 255 255 / 0.12);
-  --user: hsl(var(--hue-user) 38% 46%);
-  --user-soft: hsl(var(--hue-user) 28% 37%);
-  --user-highlight: hsl(var(--hue-user) 50% 80%);
+  --mood-angry: hsl(2 50% 56%);
+  --mood-sad: hsl(26 62% 54%);
+  --mood-neutral: hsl(46 64% 52%);
+  --mood-happy: hsl(135 36% 48%);
+  --mood-tint: 24%;
+  --task-green: hsl(140 50% 62%);
+  --task-red: hsl(2 80% 74%);
   --background-color: hsl(var(--hue-primary) 12% 7%);
   --text: hsl(var(--hue-primary) 12% 91%);
   --muted: hsl(var(--hue-primary) 8% 66%);
@@ -55,6 +67,15 @@
   --danger: #ffb4ab;
   color-scheme: dark;
 }
+
+/* Any element with data-mood / data-color gets --mood / --task-color for its own styles */
+[data-mood="angry"] { --mood: var(--mood-angry); }
+[data-mood="sad"] { --mood: var(--mood-sad); }
+[data-mood="neutral"] { --mood: var(--mood-neutral); }
+[data-mood="happy"] { --mood: var(--mood-happy); }
+[data-color="default"] { --task-color: var(--text); }
+[data-color="green"] { --task-color: var(--task-green); }
+[data-color="red"] { --task-color: var(--task-red); }
 
 * { box-sizing: border-box; }
 
@@ -76,4 +97,18 @@ app-root {
   display: flex;
   min-height: 100vh;
   flex-direction: column;
+}
+
+/* Shared by the page and by dialogs (which live outside app-root) */
+button {
+  font: inherit;
+  cursor: pointer;
+}
+button:focus-visible,
+input:focus-visible {
+  outline: 3px solid var(--primary);
+  outline-offset: 2px;
+}
+.cdk-dialog-container:focus {
+  outline: none;
 }

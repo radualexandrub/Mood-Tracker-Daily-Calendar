@@ -44,9 +44,9 @@
   position: absolute;
   z-index: -1;
   inset: 0;
-  background-image: url('../../public/undraw_relaxing_outdoors.svg');
-  background-position: 98% 110%;
-  background-size: 10rem;
+  background-image: url('../../public/undraw_hiking.svg');
+  background-position: 98% center;
+  background-size: 11rem;
   background-repeat: no-repeat;
   opacity: 0.3;
   content: '';

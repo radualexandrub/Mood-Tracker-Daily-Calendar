@@ -1,184 +1,146 @@
 // src/app/app.ts: Main application component
+import { Dialog } from '@angular/cdk/dialog';
 import { AfterViewInit, Component, ElementRef, HostListener, computed, effect, inject, signal } from '@angular/core';
-import { HOLIDAYS_BY_YEAR, Holiday, YEARS } from './holidays';
+import { DayDialog, DayDialogData } from './day-dialog';
 import { Footer } from './footer';
+import { modalConfig } from './modal';
+import { MoodFace } from './mood-face';
+import { DayEntry, MAX_TASKS, MAX_THEMES, MAX_YEAR, MIN_YEAR, MOODS, Mood, Task, normalizeEntry } from './tracker';
 
-const MONTHS = ['Ianuarie', 'Februarie', 'Martie', 'Aprilie', 'Mai', 'Iunie',
-  'Iulie', 'August', 'Septembrie', 'Octombrie', 'Noiembrie', 'Decembrie'];
-const WEEKDAY_NAMES = ['duminică', 'luni', 'marți', 'miercuri', 'joi', 'vineri', 'sâmbătă']; // Date.getDay() order
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December'];
 const WEEKDAY_HEADERS = [
-  { long: 'Luni', short: 'Lun' }, { long: 'Marți', short: 'Mar' }, { long: 'Miercuri', short: 'Mie' },
-  { long: 'Joi', short: 'Joi' }, { long: 'Vineri', short: 'Vin' }, { long: 'Sâmbătă', short: 'Sâm' },
-  { long: 'Duminică', short: 'Dum' },
+  { long: 'Monday', short: 'Mon' }, { long: 'Tuesday', short: 'Tue' }, { long: 'Wednesday', short: 'Wed' },
+  { long: 'Thursday', short: 'Thu' }, { long: 'Friday', short: 'Fri' }, { long: 'Saturday', short: 'Sat' },
+  { long: 'Sunday', short: 'Sun' },
 ];
-const storageKey = (year: number) => 'zile-libere-' + year;
-const YEAR_KEY = 'zile-libere-selected-year';
-const DEFAULT_ALLOWANCE = 21;
-const DEFAULT_LABEL = 'Concediu';
-
-/** date -> holiday name. Holidays on the same date are merged into one entry. 
- * Example: 2026-01-01 -> "Anul Nou" 
- * or for two conflicting holidays: 2026-06-01 -> "Ziua Copilului, Rusaliile" */
-function buildStateDays(holidays: Holiday[]): Map<string, string> {
-  const days = new Map<string, string>();
-  for (const { date, name } of holidays) {
-    const existing = days.get(date);
-    if (!existing) days.set(date, name);
-    else if (!existing.split(', ').includes(name)) days.set(date, `${existing}, ${name}`);
-  }
-  return new Map([...days].sort(([a], [b]) => a.localeCompare(b)));
-}
-
-const STATE_DAYS_BY_YEAR = new Map(YEARS.map(year =>
-  [year, buildStateDays(HOLIDAYS_BY_YEAR[year])] as const));
+/** All saved days share one localStorage key, keyed by ISO date: { "2026-03-14": DayEntry, ... } */
+const ENTRIES_KEY = 'mood-tracker-entries';
+const YEAR_KEY = 'mood-tracker-selected-year';
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 const pad = (n: number) => String(n).padStart(2, '0');
 const toIso = (date: Date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-const parse = (iso: string) => {
-  const [y, m, d] = iso.split('-').map(Number);
-  return new Date(y, m - 1, d);
-};
 const isWeekend = (date: Date) => date.getDay() === 0 || date.getDay() === 6;
 const shortMonth = (m: number) => MONTHS[m].slice(0, 3);
 
-interface Row { iso: string; label: string; weekday: string; weekend: boolean; name: string; }
-interface UserDay { iso: string; label: string; }
-interface YearPlan { total: number; days: UserDay[]; }
 interface Cell {
-  iso: string; 
-  day: number; 
-  month: number; 
-  monthShort: string; 
-  odd: boolean; 
+  iso: string;
+  day: number;
+  month: number;
+  monthShort: string;
+  odd: boolean;
   inYear: boolean;
-  weekend: boolean; 
-  state?: string; 
-  userLabel?: string; 
-  first: boolean; 
+  weekend: boolean;
+  mood: Mood | null;
+  themes: string[];
+  tasks: Task[];
+  filled: boolean; // has a mood, themes or tasks
+  title: string; // tooltip with the full (untruncated) text of the day
+  first: boolean;
   last: boolean;
 }
+/** A rendered calendar row is either a month banner or one Monday-to-Sunday week */
 interface CalRow { key: string; month?: MonthStat; cells?: Cell[]; }
-interface MonthStat { index: number; name: string; daysInMonth: number; work: number; vacation: number; }
-
-function toUserDay(value: unknown): UserDay | null {
-  if (typeof value === 'string') return { iso: value, label: DEFAULT_LABEL };
-  if (value && 
-      typeof value === 'object' && 
-      typeof (value as UserDay).iso === 'string') {
-    const { iso, label } = value as UserDay;
-    return { iso, label: typeof label === 'string' && label.trim() ? label.trim() : DEFAULT_LABEL };
-  }
-  return null;
+/** Logged-day and mood totals used by a month's banner and summary controls */
+interface MonthStat {
+  index: number;
+  name: string;
+  daysInMonth: number;
+  logged: number; // days with something saved
+  moods: Record<Mood, number>;
 }
 
-const byIso = (a: UserDay, b: UserDay) => a.iso.localeCompare(b.iso);
-
-/** Loads a year's free days plan from localStorage,
- *  or returns a fresh plan if none is saved. */
-function loadPlan(year: number): YearPlan {
-  const plan: YearPlan = { total: DEFAULT_ALLOWANCE, days: [] };
+/**
+ * Loads and normalizes saved entries, retaining only values with date-shaped ISO keys.
+ * Missing, corrupt, or unavailable storage starts the app with an empty store.
+ */
+function loadEntries(): Record<string, DayEntry> {
+  const entries: Record<string, DayEntry> = {};
   try {
-    const saved = JSON.parse(localStorage.getItem(storageKey(year)) ?? 'null');
-    if (saved && Number.isFinite(saved.total)) plan.total = saved.total;
-    if (saved && Array.isArray(saved.days)) {
-      plan.days = saved.days
-        .map(toUserDay)
-        .filter((day: UserDay | null): day is UserDay => day !== null && day.iso.startsWith(`${year}-`))
-        .sort(byIso);
+    const saved = JSON.parse(localStorage.getItem(ENTRIES_KEY) ?? 'null');
+    if (saved && typeof saved === 'object') {
+      for (const [iso, value] of Object.entries(saved)) {
+        const entry = normalizeEntry(value);
+        if (entry && ISO_DATE.test(iso)) entries[iso] = entry;
+      }
     }
-  } catch { /* storage unavailable: start fresh */ }
-  return plan;
+  } catch { /* storage unavailable or corrupt: start fresh */ }
+  return entries;
 }
 
-/** Restore the last selected year, otherwise prefer the current year when supported. */
+/** Restore the last selected year, otherwise use the current year */
 function initialYearSelected(): number {
   try {
     const saved = Number(localStorage.getItem(YEAR_KEY));
-    if (YEARS.includes(saved)) return saved;
+    if (Number.isInteger(saved) && saved >= MIN_YEAR && saved <= MAX_YEAR) return saved;
   } catch { /* ignore */ }
   const current = new Date().getFullYear();
-  return YEARS.includes(current) ? current : YEARS[YEARS.length - 1];
+  return Math.min(MAX_YEAR, Math.max(MIN_YEAR, current));
 }
 
-function toRow(iso: string, name: string): Row {
-  const date = parse(iso);
-  return {
-    iso,
-    label: `${date.getDate()} ${MONTHS[date.getMonth()].toLowerCase()}`,
-    weekday: WEEKDAY_NAMES[date.getDay()],
-    weekend: isWeekend(date),
-    name,
-  };
+/** One line with everything saved for a day, used as the cell tooltip */
+function describe(entry?: DayEntry): string {
+  if (!entry) return 'Click to add mood, themes and tasks';
+  const mood = MOODS.find(m => m.id === entry.mood)?.label;
+  return [mood, entry.themes.join(', '), entry.tasks.map(t => t.text).join('; ')]
+    .filter(Boolean)
+    .join(' · ');
 }
 
 @Component({
   selector: 'app-root',
-  imports: [Footer],
+  imports: [Footer, MoodFace],
   templateUrl: './app.html',
   styleUrl: './app.css',
 })
 export class App implements AfterViewInit {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly dialog = inject(Dialog);
 
-  readonly years = YEARS;
-  readonly year = signal(initialYearSelected());
+  readonly moods = MOODS;
+  readonly maxThemes = MAX_THEMES;
+  readonly maxTasks = MAX_TASKS;
   readonly weekdayHeaders = WEEKDAY_HEADERS;
+  /** Currently displayed year; changing it rebuilds the derived calendar signals */
+  readonly year = signal(initialYearSelected());
+  readonly canGoBack = computed(() => this.year() > MIN_YEAR);
+  readonly canGoForward = computed(() => this.year() < MAX_YEAR);
 
-  private readonly plans = signal<Record<number, YearPlan>>(
-    Object.fromEntries(YEARS.map(year => [year, loadPlan(year)])));
-
-  readonly message = signal(''); // error shown under the form
-  readonly info = signal(''); // success note for ranges
-  readonly start = signal('');
-  readonly end = signal('');
-  readonly label = signal('');
+  /** Single source of truth for all saved days; every write is normalized before updating it */
+  private readonly entries = signal<Record<string, DayEntry>>(loadEntries());
   readonly showBackToTop = signal(false);
 
-  readonly minDate = computed(() => `${this.year()}-01-01`);
-  readonly maxDate = computed(() => `${this.year()}-12-31`);
-
-  readonly total = computed(() => this.plans()[this.year()].total);
-  readonly userDays = computed(() => this.plans()[this.year()].days);
-
-  readonly stateDays = computed(() => STATE_DAYS_BY_YEAR.get(this.year())!);
-  readonly stateRows = computed(() => [...this.stateDays()].map(([iso, name]) => toRow(iso, name)));
-  readonly weekendCount = computed(() => this.stateRows().filter(row => row.weekend).length);
-  readonly weekdayCount = computed(() => this.stateRows().length - this.weekendCount());
-
-  readonly userRows = computed(() => this.userDays().map(d => toRow(d.iso, d.label)));
-  readonly used = computed(() => this.userDays().length);
-  readonly remaining = computed(() => this.total() - this.used());
-  readonly percentUsed = computed(() => this.total() > 0 ? Math.min(100, (this.used() / this.total()) * 100) : 100);
-
-  /** Working-day numbers for all 12 months. */
+  /** Logged days and mood counts for all 12 months */
   readonly months = computed<MonthStat[]>(() => {
     const year = this.year();
-    const stateDays = this.stateDays();
-    const user = new Set(this.userDays().map(d => d.iso));
-    return MONTHS.map((name, monthFromIdx0) => {
-      const daysInMonth = new Date(year, monthFromIdx0 + 1, 0).getDate();
-      let work = 0;
-      let vacation = 0;
+    const entries = this.entries();
+    return MONTHS.map((name, index) => {
+      const daysInMonth = new Date(year, index + 1, 0).getDate();
+      const moods: Record<Mood, number> = { angry: 0, sad: 0, neutral: 0, happy: 0 };
+      let logged = 0;
       for (let day = 1; day <= daysInMonth; day++) {
-        const date = new Date(year, monthFromIdx0, day);
-        const iso = toIso(date);
-        if (!isWeekend(date) && !stateDays.has(iso)) work++;
-        if (user.has(iso)) vacation++;
+        const entry = entries[toIso(new Date(year, index, day))];
+        if (!entry) continue;
+        logged++;
+        if (entry.mood) moods[entry.mood]++;
       }
-      return { index: monthFromIdx0, name, daysInMonth, work, vacation };
+      return { index, name, daysInMonth, logged, moods };
     });
   });
+  readonly daysInYear = computed(() => this.months().reduce((sum, m) => sum + m.daysInMonth, 0));
+  readonly logged = computed(() => this.months().reduce((sum, m) => sum + m.logged, 0));
+  readonly percentLogged = computed(() => (this.logged() / this.daysInYear()) * 100);
 
   /**
    * The whole year as one continuous list of Monday-to-Sunday weeks. A banner row (month name and
-   * working days) precedes the week that contains the 1st of each month. The first and last week
+   * logged days) precedes the week that contains the 1st of each month. The first and last week
    * are completed with real days from the neighbouring years, so numbering never has gaps.
    */
   readonly rows = computed<CalRow[]>(() => {
     const year = this.year();
-    const stateDays = this.stateDays();
     const months = this.months();
-    const user = new Map(this.userDays().map(d => [d.iso, d.label]));
+    const entries = this.entries();
     const firstOfYear = new Date(year, 0, 1);
     const lastOfYear = new Date(year, 11, 31);
     const before = (firstOfYear.getDay() + 6) % 7; // days back to the previous Monday
@@ -191,6 +153,7 @@ export class App implements AfterViewInit {
       const date = new Date(year, 0, 1 - before + i);
       const iso = toIso(date);
       const inYear = date.getFullYear() === year;
+      const entry = inYear ? entries[iso] : undefined; // days of other years stay empty and inactive
       const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
       week.push({
         iso,
@@ -200,8 +163,11 @@ export class App implements AfterViewInit {
         odd: date.getMonth() % 2 === 1,
         inYear,
         weekend: isWeekend(date),
-        state: stateDays.get(iso),
-        userLabel: user.get(iso),
+        mood: entry?.mood ?? null,
+        themes: entry?.themes ?? [],
+        tasks: entry?.tasks ?? [],
+        filled: !!entry,
+        title: inYear ? describe(entry) : '',
         first: inYear && date.getDate() === 1,
         last: inYear && date.getDate() === lastDay,
       });
@@ -216,12 +182,10 @@ export class App implements AfterViewInit {
   });
 
   constructor() {
+    // Persist each signal independently so changing the view year does not rewrite day entries.
     effect(() => {
-      const plans = this.plans();
       try {
-        for (const year of YEARS) {
-          localStorage.setItem(storageKey(year), JSON.stringify(plans[year]));
-        }
+        localStorage.setItem(ENTRIES_KEY, JSON.stringify(this.entries()));
       } catch { /* ignore */ }
     });
     effect(() => {
@@ -231,143 +195,66 @@ export class App implements AfterViewInit {
     });
   }
 
-  /** Applies a change only to the currently selected year's plan. */
-  private updatePlan(change: (plan: YearPlan) => Partial<YearPlan>): void {
-    const year = this.year();
-    this.plans.update(plans => ({ ...plans, [year]: { ...plans[year], ...change(plans[year]) } }));
+  /** Moves the selected year by the requested amount while respecting the supported bounds */
+  changeYear(delta: number): void {
+    const year = this.year() + delta;
+    if (year >= MIN_YEAR && year <= MAX_YEAR) this.year.set(year);
   }
 
-  selectYear(year: number): void {
-    if (!YEARS.includes(year) || year === this.year()) return;
-    this.year.set(year);
-    this.start.set('');
-    this.end.set('');
-    this.message.set('');
-    this.info.set('');
+  /** Clicking a day of the selected year opens the dialog where its mood, themes and tasks are edited */
+  openDay(cell: Cell): void {
+    if (!cell.inYear) return;
+    const ref = this.dialog.open<DayEntry, DayDialogData>(
+      DayDialog,
+      modalConfig<DayDialogData>({ iso: cell.iso, entry: this.entries()[cell.iso] }));
+    // The dialog only returns a value when Save is pressed. Cancel, Escape and X return nothing.
+    ref.closed.subscribe(result => {
+      if (result) this.saveDay(cell.iso, result);
+    });
   }
 
-  /** Choosing a start date also fills the end date, so a single day only needs one pick. */
-  setStart(value: string): void {
-    this.start.set(value);
-    this.end.set(value);
+  /** Keyboard access: Enter or Space on a focused day opens it, but not on the delete button inside it */
+  onCellKey(cell: Cell, event: Event): void {
+    if (event.target !== event.currentTarget) return;
+    event.preventDefault();
+    this.openDay(cell);
   }
 
-  setEnd(value: string): void {
-    this.end.set(value && value < this.start() ? this.start() : value);
+  /** Stores the day, or deletes it when nothing is left (no mood, no themes, no tasks) */
+  private saveDay(iso: string, value: DayEntry | null): void {
+    const entry = normalizeEntry(value);
+    this.entries.update(all => {
+      const next = { ...all };
+      if (entry) next[iso] = entry;
+      else delete next[iso];
+      return next;
+    });
   }
 
-  /** Adds every working day between the input form's start and end dates */
-  add(): void {
-    const start = this.start();
-    if (this.addRange(start, this.end() || start, this.label())) {
-      this.start.set('');
-      this.end.set('');
-      this.label.set('');
-    }
-  }
-
-  /** A free working day of this year that can still be booked */
-  canPickFreeDay(selectedCell: Cell): boolean {
-    return selectedCell.inYear &&
-          !selectedCell.weekend &&
-          !selectedCell.state &&
-          !selectedCell.userLabel &&
-          this.remaining() > 0;
-  }
-
-  /** Clicking a free day in the calendar adds it exactly like picking it in the input form */
-  addFromCalendar(selectedCell: Cell): void {
-    if (this.canPickFreeDay(selectedCell)) {
-      this.addRange(selectedCell.iso, selectedCell.iso, this.label());
-    }
-  }
-
-  /**
-   * Shared by the input form and the calendar: adds every working day between start and end
-   * (weekends and state holidays are skipped). Returns true when days were added
-   */
-  private addRange(startDate: string, endDate: string, label: string): boolean {
-    this.message.set('');
-    this.info.set('');
-    const name = label.trim() || DEFAULT_LABEL;
-    if (!startDate) return this.failToAddFreeDay('Alege o dată de început.');
-    const year = this.year();
-    if (!startDate.startsWith(`${year}-`) || !endDate.startsWith(`${year}-`))
-      return this.failToAddFreeDay(`Alege date din ${year}.`);
-
-    const picked: string[] = [];
-    let skipped = 0;
-    let lastReason = '';
-    for (const d = parse(startDate); toIso(d) <= endDate; d.setDate(d.getDate() + 1)) {
-      const iso = toIso(d);
-      const reason = this.skipReason(iso);
-      if (reason) { skipped++; lastReason = reason; } else picked.push(iso);
-    }
-
-    const single = startDate === endDate;
-    if (!picked.length) {
-      return this.failToAddFreeDay(single ? lastReason : 'Intervalul ales nu conține nicio zi lucrătoare disponibilă.');
-    }
-    if (picked.length > this.remaining()) {
-      return this.failToAddFreeDay(this.remaining() <= 0
-        ? 'Nu mai ai zile de concediu. Mărește totalul pentru a adăuga alte zile.'
-        : `Intervalul are ${picked.length} zile lucrătoare, dar mai ai doar ${this.remaining()} zile de concediu.`);
-    }
-
-    this.updatePlan(plan => ({
-      days: [...plan.days, ...picked.map(iso => ({ iso, label: name }))].sort(byIso),
-    }));
-    if (!single) {
-      this.info.set(`Au fost adăugate ${picked.length} zile` +
-        (skipped ? ` (${skipped} ignorate: weekend, sărbători legale sau zile deja alese).` : '.'));
-    }
-    return true;
-  }
-
-  private failToAddFreeDay(text: string): false {
-    this.message.set(text);
-    return false;
-  }
-
-  /** Removes a previously added free day from the plan. 
-   * Can be called from the calendar or from the list of chosen days. */
+  /** Deletes mood, themes and tasks of a day (the X in the calendar cell) */
   remove(iso: string): void {
-    this.updatePlan(plan => ({ days: plan.days.filter(day => day.iso !== iso) }));
-    this.message.set('');
-    this.info.set('');
+    this.saveDay(iso, null);
   }
 
-  updateLabel(iso: string, value: string): void {
-    const label = value.trim() || DEFAULT_LABEL;
-    this.updatePlan(plan => ({
-      days: plan.days.map(day => day.iso === iso ? { ...day, label } : day),
-    }));
-  }
-
-  setTotal(value: string): void {
-    const n = Math.floor(Number(value));
-    this.updatePlan(() => ({ total: Number.isFinite(n) && n > 0 ? n : 0 }));
-  }
-
-  /** Scrolls so the month banner sits right under the sticky balance bar and weekday header. */
+  /** Scrolls so the month banner sits right under the sticky top bar and weekday header */
   goTo(index: number): void {
     const el = document.getElementById('month-' + index);
     if (!el) return;
-    const bar = this.host.nativeElement.querySelector<HTMLElement>('.balance-bar')?.offsetHeight ?? 0;
+    const bar = this.host.nativeElement.querySelector<HTMLElement>('.top-bar')?.offsetHeight ?? 0;
     const head = this.host.nativeElement.querySelector<HTMLElement>('.cal thead')?.offsetHeight ?? 0;
     window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - bar - head, behavior: 'smooth' });
   }
 
   /**
    * Show back to top arrow.
-   * It appears when user is within 1600px from the bottom 
+   * It appears when user is within 1600px from the bottom
    * and scrolls smoothly to the top when clicked
    */
   @HostListener('window:scroll')
   updateBackToTopVisibility(): void {
     const distanceToBottom = document.documentElement.scrollHeight - window.scrollY - window.innerHeight;
     this.showBackToTop.set(
-      window.scrollY > 0 
+      window.scrollY > 0
       && distanceToBottom <= 1600);
   }
 
@@ -375,17 +262,10 @@ export class App implements AfterViewInit {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  /** Keeps the sticky weekday header just below the sticky balance bar, whatever height it has. */
+  /** Keeps the sticky weekday header just below the sticky top bar, whatever height it has */
   ngAfterViewInit(): void {
-    const bar = this.host.nativeElement.querySelector<HTMLElement>('.balance-bar');
+    const bar = this.host.nativeElement.querySelector<HTMLElement>('.top-bar');
     if (!bar || typeof ResizeObserver === 'undefined') return;
     new ResizeObserver(() => this.host.nativeElement.style.setProperty('--bar-h', bar.offsetHeight + 'px')).observe(bar);
-  }
-
-  private skipReason(iso: string): string | null {
-    if (isWeekend(parse(iso))) return 'Ziua aleasă este în weekend, nu consumă concediu.';
-    if (this.stateDays().has(iso)) return 'Ziua aleasă este deja zi liberă legală.';
-    if (this.userDays().some(d => d.iso === iso)) return 'Ai ales deja această zi.';
-    return null;
   }
 }

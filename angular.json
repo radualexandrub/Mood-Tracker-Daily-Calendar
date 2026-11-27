@@ -4,7 +4,7 @@
   "cli": { "analytics": false },
   "newProjectRoot": "projects",
   "projects": {
-    "zile-libere": {
+    "mood-tracker-calendar": {
       "projectType": "application",
       "root": "",
       "sourceRoot": "src",
@@ -29,8 +29,8 @@
         "serve": {
           "builder": "@angular/build:dev-server",
           "configurations": {
-            "production": { "buildTarget": "zile-libere:build:production" },
-            "development": { "buildTarget": "zile-libere:build:development" }
+            "production": { "buildTarget": "mood-tracker-calendar:build:production" },
+            "development": { "buildTarget": "mood-tracker-calendar:build:development" }
           },
           "defaultConfiguration": "development"
         }

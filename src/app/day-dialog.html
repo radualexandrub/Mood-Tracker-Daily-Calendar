@@ -1,0 +1,58 @@
+<!-- src/app/day-dialog.html: Fields for one day -->
+<app-modal [heading]="heading" (closed)="cancel()">
+  <section class="field">
+    <h3 id="mood-heading">Mood</h3>
+    <div class="moods" role="group" aria-labelledby="mood-heading">
+      @for (m of moods; track m.id) {
+        <button type="button" class="mood-option" [attr.data-mood]="m.id"
+                [class.selected]="mood() === m.id" [attr.aria-pressed]="mood() === m.id"
+                (click)="toggleMood(m.id)">
+          <app-mood-face [mood]="m.id" />
+          <span>{{ m.label }}</span>
+        </button>
+      }
+    </div>
+  </section>
+
+  <section class="field">
+    <h3 id="themes-heading">Themes <span class="count">{{ themes().length }}/{{ maxThemes }}</span></h3>
+    <div class="themes" role="group" aria-labelledby="themes-heading">
+      @for (t of themeOptions; track t) {
+        <button type="button" class="chip" [class.selected]="themes().includes(t)"
+                [attr.aria-pressed]="themes().includes(t)" [disabled]="isThemeDisabled(t)"
+                (click)="toggleTheme(t)">{{ t }}</button>
+      }
+    </div>
+  </section>
+
+  <section class="field">
+    <h3>Tasks <span class="count">{{ tasks().length }}/{{ maxTasks }}</span></h3>
+    @for (t of tasks(); track t.id; let i = $index) {
+      <div class="task-row">
+        <input type="text" [value]="t.text" [attr.maxlength]="taskMaxLength"
+               [attr.aria-label]="'Task ' + (i + 1)" placeholder="What did you do?"
+               (input)="setTaskText(t.id, $any($event.target).value)" (keydown.enter)="save()">
+        <div class="swatches" role="group" [attr.aria-label]="'Text color for task ' + (i + 1)">
+          @for (c of taskColors; track c.id) {
+            <button type="button" class="swatch" [attr.data-color]="c.id"
+                    [class.selected]="t.color === c.id" [attr.aria-pressed]="t.color === c.id"
+                    [attr.aria-label]="c.label" [title]="c.label"
+                    (click)="setTaskColor(t.id, c.id)">A</button>
+          }
+        </div>
+        <button type="button" class="remove-task" [attr.aria-label]="'Remove task ' + (i + 1)"
+                title="Remove task" (click)="removeTask(t.id)">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M6 6l12 12M18 6 6 18" />
+          </svg>
+        </button>
+      </div>
+    }
+    @if (canAddTask()) {
+      <button type="button" class="add-task" (click)="addTask()">Add task</button>
+    }
+  </section>
+
+  <button modal-actions type="button" class="secondary" (click)="cancel()">Cancel</button>
+  <button modal-actions type="button" class="primary" (click)="save()">Save</button>
+</app-modal>

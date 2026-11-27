@@ -1,0 +1,184 @@
+/* src/app/day-dialog.css: Styles for the day dialog fields */
+:host {
+  display: block;
+}
+
+.field {
+  margin-top: 1rem;
+}
+h3 {
+  margin: 0 0 0.5rem;
+  color: var(--primary);
+  font-size: 0.95rem;
+}
+.count {
+  margin-left: 0.35rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 400;
+}
+
+/* Mood: four big buttons, each in its own color */
+.moods {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+}
+.mood-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.6rem 0.25rem;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.85rem;
+}
+.mood-option app-mood-face {
+  width: 2.4rem;
+  height: 2.4rem;
+  color: var(--mood);
+}
+.mood-option:hover {
+  background: color-mix(in srgb, var(--mood) 12%, var(--surface));
+}
+.mood-option.selected {
+  border-color: var(--mood);
+  background: color-mix(in srgb, var(--mood) var(--mood-tint), var(--surface));
+  font-weight: 600;
+}
+
+/* Themes: toggle chips, at most 3 at a time */
+.themes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.chip {
+  padding: 0.3rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-control);
+  color: var(--text);
+  font-size: 0.85rem;
+}
+.chip:hover:not(:disabled) {
+  background: var(--primary-soft);
+}
+.chip.selected {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--font-opposite-color);
+}
+.chip:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Tasks: text, text color and remove button on one row */
+.task-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+.task-row input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+}
+.swatches {
+  display: flex;
+  flex: none;
+  gap: 0.25rem;
+}
+.swatch {
+  width: 1.9rem;
+  height: 1.9rem;
+  padding: 0;
+  border: 2px solid var(--border);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--task-color);
+  font-weight: 700;
+}
+.swatch.selected {
+  border-color: var(--task-color);
+  background: var(--surface-control);
+}
+.remove-task {
+  display: grid;
+  flex: none;
+  width: 1.9rem;
+  height: 1.9rem;
+  padding: 0.4rem;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+}
+.remove-task:hover {
+  background: var(--surface-control);
+  color: var(--text);
+}
+.remove-task svg {
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-width: 2.5;
+}
+.add-task {
+  padding: 0.3rem 0.8rem;
+  border: 1px dashed var(--primary);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--primary);
+}
+.add-task:hover {
+  background: var(--primary-soft);
+}
+
+/* Footer buttons (placed in the modal frame's footer) */
+.primary,
+.secondary {
+  padding: 0.5rem 1.2rem;
+  border-radius: 6px;
+}
+.primary {
+  border: 0;
+  background: var(--primary);
+  color: var(--font-opposite-color);
+}
+.primary:hover {
+  filter: brightness(1.15);
+}
+.secondary {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+}
+.secondary:hover {
+  background: var(--surface-control);
+}
+
+@media (max-width: 480px) {
+  .task-row {
+    flex-wrap: wrap;
+  }
+  .task-row input {
+    flex-basis: 100%;
+  }
+  .moods {
+    gap: 0.35rem;
+  }
+}
