@@ -122,6 +122,8 @@ export class App implements AfterViewInit {
   readonly moods = MOODS;
   readonly maxThemes = MAX_THEMES;
   readonly maxTasks = MAX_TASKS;
+  readonly minYear = MIN_YEAR;
+  readonly maxYear = MAX_YEAR;
   readonly weekdayHeaders = WEEKDAY_HEADERS;
   /** ISO date used to highlight today's cell in the calendar. */
   readonly todayIso = toIso(new Date());
@@ -288,6 +290,18 @@ export class App implements AfterViewInit {
   changeYear(delta: number): void {
     const year = this.year() + delta;
     if (year >= MIN_YEAR && year <= MAX_YEAR) this.year.set(year);
+  }
+
+  /** Selects a supported whole year from the year input, restoring the current year if invalid. */
+  selectYear(event: Event): void {
+    if (!(event.target instanceof HTMLInputElement)) return;
+    const input = event.target;
+    const year = input.valueAsNumber;
+    if (Number.isInteger(year) && year >= MIN_YEAR && year <= MAX_YEAR) {
+      this.year.set(year);
+    } else {
+      input.value = String(this.year());
+    }
   }
 
   /** Clicking a day of the selected year opens the dialog where its mood, themes and tasks are edited */

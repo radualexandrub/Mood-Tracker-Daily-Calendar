@@ -68,6 +68,40 @@
   background: var(--font-opposite-color);
   transition: width 0.25s;
 }
+.top-bar-year-nav {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.35rem;
+  margin-left: auto;
+}
+.top-bar-year-nav button {
+  display: grid;
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0.35rem;
+  place-items: center;
+  border: 0;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--font-opposite-color) 12%, transparent);
+  color: inherit;
+}
+.top-bar-year-nav button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--font-opposite-color) 22%, transparent);
+}
+.top-bar-year-nav button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.top-bar-year-nav svg {
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.5;
+}
 
 /* Page content - Main Container */
 .page {
@@ -89,43 +123,18 @@ h2 {
   margin: 0 0 1rem;
 }
 
-/* Year selector: previous / current / next */
+/* Direct year selector */
 .year-nav {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
   margin: 0.75rem 0 1rem;
 }
-.year-nav button {
-  display: grid;
-  width: 2.2rem;
-  height: 2.2rem;
-  padding: 0.45rem;
-  place-items: center;
-  border: 0;
+.year-nav input {
+  width: 6rem;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--border);
   border-radius: 6px;
   background: var(--surface-control);
-  color: var(--text);
-}
-.year-nav button:hover:not(:disabled) {
-  background: var(--primary-soft);
-}
-.year-nav button:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-.year-nav svg {
-  width: 100%;
-  height: 100%;
-  fill: none;
-  stroke: currentColor;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 2.5;
-}
-.year-label {
-  min-width: 4.5rem;
-  color: var(--primary);
   font-size: 1.1rem;
   font-weight: 700;
   text-align: center;

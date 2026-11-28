@@ -6,24 +6,24 @@
          [attr.aria-valuenow]="logged()" aria-valuemin="0" [attr.aria-valuemax]="daysInYear()">
       <div class="fill" [style.width.%]="percentLogged()"></div>
     </div>
+    <div class="top-bar-year-nav" role="group" aria-label="Change calendar year">
+      <button type="button" aria-label="Previous year" title="Previous year"
+              [disabled]="!canGoBack()" (click)="changeYear(-1)">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 5l-7 7 7 7" /></svg>
+      </button>
+      <button type="button" aria-label="Next year" title="Next year"
+              [disabled]="!canGoForward()" (click)="changeYear(1)">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 5l7 7-7 7" /></svg>
+      </button>
+    </div>
   </div>
 </div>
 
 <main class="page">
   <h1>Mood Tracker &amp; Daily Calendar {{ year() }}</h1>
-  <nav class="year-nav" aria-label="Choose year">
-    <!-- Left arrow -->
-    <button type="button" aria-label="Previous year" title="Previous year"
-            [disabled]="!canGoBack()" (click)="changeYear(-1)">
-      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 5l-7 7 7 7" /></svg>
-    </button>
-    <!-- Current selected year -->
-    <span class="year-label" aria-live="polite">{{ year() }}</span>
-    <!-- Right arrow -->
-    <button type="button" aria-label="Next year" title="Next year"
-            [disabled]="!canGoForward()" (click)="changeYear(1)">
-      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 5l7 7-7 7" /></svg>
-    </button>
+  <nav class="year-nav" aria-label="Jump to year">
+    <input type="number" aria-label="Jump to year" title="Jump to year"
+           [value]="year()" [min]="minYear" [max]="maxYear" step="1" (change)="selectYear($event)">
   </nav>
   <p class="summary">
     Click a day to set its mood, up to {{ maxThemes }} themes and up to {{ maxTasks }} tasks.
