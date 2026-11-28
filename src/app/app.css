@@ -340,7 +340,11 @@ table {
 .export button:hover {
   filter: brightness(1.15);
 }
-
+.export .status {
+  margin: 0.75rem 0 0;
+  color: var(--primary);
+  font-size: 0.9rem;
+}
 .banner {
   display: flex;
   flex-wrap: wrap;

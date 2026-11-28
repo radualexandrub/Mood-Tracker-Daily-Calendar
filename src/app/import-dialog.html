@@ -1,0 +1,33 @@
+<!-- src/app/import-dialog.html: Import mode, file picker, and validation status -->
+<app-modal heading="Import from JSON" (closed)="cancel()">
+  <fieldset class="field">
+    <legend><strong>Import mode</strong></legend>
+    <label class="option">
+      <input type="radio" name="importMode" value="add"
+             [checked]="importMode() === 'add'" (change)="setMode('add')">
+      <span><strong>Add</strong>: keeps your existing days. Only days that are not in the app yet are added.</span>
+    </label>
+    <label class="option">
+      <input type="radio" name="importMode" value="overwrite"
+             [checked]="importMode() === 'overwrite'" (change)="setMode('overwrite')">
+      <span><strong>Overwrite</strong>: replaces all days of every year found in the file. Other years stay untouched.</span>
+    </label>
+  </fieldset>
+
+  <div class="field">
+    <label for="import-file">JSON file</label>
+    <input id="import-file" type="file" accept="application/json,.json" (change)="onFileChange($event)">
+    @if (parsed(); as result) {
+      <p class="ok" role="status">
+        Found {{ result.valid }} valid {{ result.valid === 1 ? 'day' : 'days' }} in {{ result.years.length }}
+        {{ result.years.length === 1 ? 'year' : 'years' }}@if (result.skipped) {, {{ result.skipped }} invalid will be skipped}.
+      </p>
+    }
+    @if (error()) {
+      <p class="error" role="alert">{{ error() }}</p>
+    }
+  </div>
+
+  <button modal-actions type="button" class="secondary" (click)="cancel()">Cancel</button>
+  <button modal-actions type="button" class="primary" (click)="submit()">Import</button>
+</app-modal>

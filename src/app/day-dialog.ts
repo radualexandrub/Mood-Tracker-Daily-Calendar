@@ -113,7 +113,11 @@ export class DayDialog {
       mood: this.mood(),
       themes: this.themes(),
       tasks: this.tasks()
-        .map(t => ({ text: t.text.trim(), color: t.color }))
+        .map(t => {
+          // Capitalize the first letter of each task, and trim
+          const [first, ...rest] = t.text.trim();
+          return { text: first ? first.toUpperCase() + rest.join('') : '', color: t.color };
+        })
         .filter(t => t.text),
     });
   }

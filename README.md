@@ -14,6 +14,7 @@ Built with Angular 20 and Angular CDK (dialog). Node.js version 24.
 - **Up to 3 themes per day**: chosen from a predefined list (Work, Clean, Outside, Shopping, ...) and shown in the cell separated by commas.
 - **Up to 3 tasks per day**: free text of at most 64 characters, one line per task in the cell. Each task has a text color: default, green or red.
 - **Edit in a dialog**: clicking a day (or pressing Enter / Space on it) opens a dialog. Save stores the day; Cancel, Escape and X close it without changes. Saving a day with nothing selected removes it.
+- **Import from JSON**: Add/Concatenate mode keeps existing days, while Overwrite replaces the years found in the file and leaves other years untouched.
 - **Clear a day**: the small X in a calendar cell deletes the mood, themes and tasks of that day.
 - **Continuous year calendar**: one scrollable grid of Monday-to-Sunday weeks, with no gaps in the day numbering when a month ends. Months alternate between two slightly different backgrounds, the first and last day of each month carry a small label, and the weekday header stays pinned while you scroll.
 - **Month banners**: each month starts with a banner showing how many days are logged and how many days had each mood.
@@ -64,7 +65,7 @@ Everything is kept in one `localStorage` key, `mood-tracker-entries`, as JSON ke
 }
 ```
 
-Everything that enters the store goes through `normalizeEntry()` in `src/app/tracker.ts`, which drops unknown moods and colors, trims and shortens text, and caps the lists. A future import can reuse it, and the `Modal` component, for its own dialog.
+Everything that enters the store goes through `normalizeEntry()` in `src/app/tracker.ts`, which drops unknown moods and colors, trims and shortens text, and caps the lists. JSON exports wrap `entries` with an `appId` and `version`; imports are validated by `parseImport()` before they can be merged into the store.
 
 Use the **JSON Export** or **CSV Export** buttons below the calendar to download all saved days across all years. JSON exports include the `appId`, format `version`, and date-keyed `entries`; CSV exports use one row per day with the themes and up to three tasks (including their colors). Export filenames include the app ID and the date of download.
 

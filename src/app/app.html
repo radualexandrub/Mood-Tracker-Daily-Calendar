@@ -110,11 +110,15 @@
 
   <section class="export">
     <h2>Save your logged days locally</h2>
-    <p class="hint">Download all your set moods, tasks and day-themes across all years.</p>
+    <p class="hint">Download your logged days, or restore them from a JSON export.</p>
     <div class="actions">
       <button type="button" (click)="exportJson()">JSON Export</button>
       <button type="button" (click)="exportCsv()">CSV Export</button>
+      <button type="button" (click)="openImport()">JSON Import</button>
     </div>
+    @if (importStatus()) {
+      <p class="status" role="status">{{ importStatus() }}</p>
+    }
   </section>
 </main>
 

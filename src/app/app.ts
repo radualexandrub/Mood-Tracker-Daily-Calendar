@@ -3,9 +3,13 @@ import { Dialog } from '@angular/cdk/dialog';
 import { AfterViewInit, Component, ElementRef, HostListener, computed, effect, inject, signal } from '@angular/core';
 import { DayDialog, DayDialogData } from './day-dialog';
 import { Footer } from './footer';
+import { ImportDialog, ImportDialogResult } from './import-dialog';
 import { modalConfig } from './modal';
 import { MoodFace } from './mood-face';
-import { DayEntry, MAX_TASKS, MAX_THEMES, MAX_YEAR, MIN_YEAR, MOODS, Mood, Task, normalizeEntry } from './tracker';
+import {
+  DayEntry, EXPORT_APP_ID, EXPORT_VERSION, ISO_DATE, ImportMode, ImportSummary, MAX_TASKS, MAX_THEMES,
+  MAX_YEAR, MIN_YEAR, MOODS, Mood, Task, mergeEntries, normalizeEntry,
+} from './tracker';
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December'];
@@ -17,10 +21,7 @@ const WEEKDAY_HEADERS = [
 /** All saved days share one localStorage key, keyed by ISO date: { "2026-03-14": DayEntry, ... } */
 const ENTRIES_KEY = 'mood-tracker-entries';
 const YEAR_KEY = 'mood-tracker-selected-year';
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const CSV_SEPARATOR = ',';
-const EXPORT_APP_ID = 'mood-tracker-calendar';
-const EXPORT_VERSION = 1;
 
 const pad = (n: number) => String(n).padStart(2, '0');
 const toIso = (date: Date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
@@ -31,6 +32,17 @@ const shortMonth = (m: number) => MONTHS[m].slice(0, 3);
 function csvCell(value: string): string {
   const safeValue = /^[\s]*[=+\-@]/.test(value) ? `'${value}` : value;
   return `"${safeValue.replace(/"/g, '""')}"`;
+}
+
+const days = (count: number) => `${count} day${count === 1 ? '' : 's'}`;
+
+/** Builds the one-line status shown after an import completes. */
+function importMessage(summary: ImportSummary, mode: ImportMode, skipped: number): string {
+  const parts = [`${days(summary.added)} added`];
+  if (mode === 'add') parts.push(`${days(summary.unchanged)} already existed and kept`);
+  else parts.push(`${days(summary.replaced)} replaced`, `${days(summary.removed)} removed (not in the file)`);
+  if (skipped) parts.push(`${days(skipped)} invalid and skipped`);
+  return `Import finished: ${parts.join(', ')}.`;
 }
 
 interface Cell {
@@ -121,6 +133,7 @@ export class App implements AfterViewInit {
   /** Single source of truth for all saved days; every write is normalized before updating it */
   private readonly entries = signal<Record<string, DayEntry>>(loadEntries());
   readonly showBackToTop = signal(false);
+  readonly importStatus = signal('');
 
   /** Logged days and mood counts for all 12 months */
   readonly months = computed<MonthStat[]>(() => {
@@ -242,6 +255,17 @@ export class App implements AfterViewInit {
       .join('\r\n');
 
     this.download(this.exportFilename('csv'), content, 'text/csv;charset=utf-8');
+  }
+
+  /** Opens the import dialog and merges its validated result into the saved days. */
+  openImport(): void {
+    const ref = this.dialog.open<ImportDialogResult, null>(ImportDialog, modalConfig<null>(null));
+    ref.closed.subscribe(result => {
+      if (!result) return;
+      const summary = mergeEntries(this.entries(), result.years, result.mode);
+      this.entries.set(summary.entries);
+      this.importStatus.set(importMessage(summary, result.mode, result.skipped));
+    });
   }
 
   private exportFilename(extension: 'json' | 'csv'): string {
