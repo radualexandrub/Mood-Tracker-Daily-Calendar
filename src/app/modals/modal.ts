@@ -1,4 +1,4 @@
-// src/app/modal.ts: Reusable modal frame (header, scrolling body, action buttons)
+// src/app/modals/modal.ts: Reusable modal frame (header, scrolling body, action buttons)
 import { DialogConfig } from '@angular/cdk/dialog';
 import { Component, input, output } from '@angular/core';
 

@@ -1,8 +1,8 @@
-// src/app/import-dialog.ts: Dialog for importing JSON exported by this app
+// src/app/modals/import-dialog.ts: Dialog for importing JSON exported by this app
 import { DialogRef } from '@angular/cdk/dialog';
 import { Component, inject, signal } from '@angular/core';
 import { Modal } from './modal';
-import { ImportError, ImportMode, MAX_IMPORT_BYTES, ParsedImport, parseImport } from './tracker';
+import { ImportError, ImportMode, MAX_IMPORT_BYTES, ParsedImport, parseImport } from '../tracker';
 
 /** Returned by Import only; Cancel, X and Escape close without a value. */
 export interface ImportDialogResult extends ParsedImport {

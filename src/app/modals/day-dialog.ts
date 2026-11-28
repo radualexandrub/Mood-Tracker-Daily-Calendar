@@ -1,11 +1,11 @@
-// src/app/day-dialog.ts: Dialog for editing the mood, themes and tasks of one day
+// src/app/modals/day-dialog.ts: Dialog for editing the mood, themes and tasks of one day
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { Component, computed, inject, signal } from '@angular/core';
 import { Modal } from './modal';
-import { MoodFace } from './mood-face';
+import { MoodFace } from '../mood-face';
 import {
   DayEntry, MAX_TASKS, MAX_THEMES, MOODS, Mood, TASK_COLORS, TASK_MAX_LENGTH, TaskColor, THEMES,
-} from './tracker';
+} from '../tracker';
 
 export interface DayDialogData {
   /** ISO date key of the calendar day being edited */

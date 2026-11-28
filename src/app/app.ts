@@ -1,10 +1,10 @@
 // src/app/app.ts: Main application component
 import { Dialog } from '@angular/cdk/dialog';
 import { AfterViewInit, Component, ElementRef, HostListener, computed, effect, inject, signal } from '@angular/core';
-import { DayDialog, DayDialogData } from './day-dialog';
+import { DayDialog, DayDialogData } from './modals/day-dialog';
 import { Footer } from './footer';
-import { ImportDialog, ImportDialogResult } from './import-dialog';
-import { modalConfig } from './modal';
+import { ImportDialog, ImportDialogResult } from './modals/import-dialog';
+import { modalConfig } from './modals/modal';
 import { MoodFace } from './mood-face';
 import {
   DayEntry, EXPORT_APP_ID, EXPORT_VERSION, ISO_DATE, ImportMode, ImportSummary, MAX_TASKS, MAX_THEMES,

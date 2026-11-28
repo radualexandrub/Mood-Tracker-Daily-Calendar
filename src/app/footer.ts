@@ -25,7 +25,7 @@ export class Footer implements OnInit {
 
     document.documentElement.setAttribute('data-theme', theme);
 
-    const storedAccentColor = localStorage.getItem('accent-color');
+    const storedAccentColor = localStorage.getItem('mood-tracker-accent-color');
     if (storedAccentColor && /^#[\da-f]{6}$/i.test(storedAccentColor)) {
       this.accentColor = storedAccentColor;
       this.applyAccentColor(storedAccentColor);
@@ -47,7 +47,7 @@ export class Footer implements OnInit {
     if (!(input instanceof HTMLInputElement)) return;
 
     this.accentColor = input.value;
-    localStorage.setItem('accent-color', this.accentColor);
+    localStorage.setItem('mood-tracker-accent-color', this.accentColor);
     this.applyAccentColor(this.accentColor);
   }
 
