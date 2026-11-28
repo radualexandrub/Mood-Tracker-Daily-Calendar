@@ -1,6 +1,7 @@
 // src/app/modals/day-dialog.ts: Dialog for editing the mood, themes and tasks of one day
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { Component, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Modal } from './modal';
 import { MoodFace } from '../mood-face';
 import {
@@ -54,6 +55,21 @@ export class DayDialog {
 
   readonly tasks = signal<TaskDraft[]>(this.initialTasks());
   readonly canAddTask = computed(() => this.tasks().length < MAX_TASKS);
+
+  constructor() {
+    this.dialogRef.disableClose = true;
+    this.dialogRef.backdropClick
+      .pipe(takeUntilDestroyed())
+      .subscribe(() => this.save());
+    this.dialogRef.keydownEvents
+      .pipe(takeUntilDestroyed())
+      .subscribe(event => {
+        if (event.key === 'Escape' && !event.altKey && !event.shiftKey && !event.ctrlKey && !event.metaKey) {
+          event.preventDefault();
+          this.cancel();
+        }
+      });
+  }
 
   /** Converts/Maps saved tasks into stable input editor rows, or creates the initial blank row */
   private initialTasks(): TaskDraft[] {
